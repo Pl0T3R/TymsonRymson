@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <title>Katalog Gier - Panel Klienta</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 30px; background: #f4f4f9; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .card { background: white; padding: 15px; margin-bottom: 10px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; }
+        .form-group, .stats-bar, .filter-bar { background: white; padding: 15px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        input, button { padding: 8px 12px; margin: 5px; }
+        button { cursor: pointer; border: none; border-radius: 4px; }
+        .btn-add { background: #28a745; color: white; }
+        .btn-edit { background: #ffc107; color: black; }
+        .btn-delete { background: #dc3545; color: white; }
+        .btn-cancel { background: #6c757d; color: white; }
+        .btn-filter { background: #007bff; color: white; }
+        #komunikatBledu { color: #dc3545; font-weight: bold; margin: 5px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎮 Katalog Gier</h1>
+        
+        <!-- Panel Statystyk -->
+        <div class="stats-bar">
+            📊 <b>Statystyki bazy:</b> Łącznie gier: <span id="statIlosc">0</span> | Średnia cena: <span id="statSrednia">0 PLN</span> | Średnia ocena: <span id="statOcena">0</span>
+        </div>
+
+        <!-- Formularz Pole Rok -->
+        <div class="form-group">
+            <h3 id="formTitle">Dodaj nową grę</h3>
+            <input type="hidden" id="editId"> 
+            
+            <input type="text" id="tytul" placeholder="Tytuł gry">
+            <input type="text" id="platforma" placeholder="Platforma (np. PC)">
+            <input type="number" id="cena" placeholder="Cena PLN">
+            <input type="number" id="rok" placeholder="Rok wydania (np. 2022)">
+            <input type="number" id="ocena" placeholder="Ocena (1-10)" min="1" max="10">
+            
+            <button id="btnSubmit" class="btn-add" onclick="zapiszGre()">Dodaj do Bazy</button>
+            <button id="btnCancel" class="btn-cancel" onclick="resetujFormularz()" style="display: none;">Anuluj edycję</button>
+            <div id="komunikatBledu"></div>
+        </div>
+
+        <!-- Filtrowanie -->
+        <div class="filter-bar">
+            <b>Filtruj wg platformy:</b>
+            <button class="btn-filter" onclick="pobierzGry()">Wszystkie</button>
+            <button class="btn-filter" onclick="pobierzGry('PC')">PC</button>
+            <button class="btn-filter" onclick="pobierzGry('PS5')">PS5</button>
+            <button class="btn-filter" onclick="pobierzGry('XBOX')">XBOX</button>
+        </div>
+
+        <h2>Lista Gier w bazie:</h2>
+        <input type="text" id="wyszukiwarka" placeholder="Szukaj gry po tytule..." oninput="pobierzGry()">
+        <div id="listaGier"></div>
+    </div>
+
+    <script>
+        const API_URL = '/api/gry';
+
+        // Pobieranie statystyk
+        async function pobierzStatystyki() {
+            const res = await fetch('/api/statystyki');
+            const data = await res.json();
+            
+            document.getElementById('statIlosc').innerText = data.iloscGier;
+            document.getElementById('statSrednia').innerText = `${data.sredniaCena} PLN`;
+            document.getElementById('statOcena').innerText = `★ ${data.sredniaOcena}/10`;
+        }
+
+        let aktualnaPlatforma = '';
+
+        //  Pobieranie z filtrowaniem i wyszukiwaniem
+        async function pobierzGry(filtrPlatforma = aktualnaPlatforma) {
+            aktualnaPlatforma = filtrPlatforma;
+            const params = new URLSearchParams();
+            if (filtrPlatforma) params.append('platforma', filtrPlatforma);
+            const szukaj = document.getElementById('wyszukiwarka').value.trim();
+            if (szukaj) params.append('szukaj', szukaj);
+            const url = params.toString() ? `${API_URL}?${params}` : API_URL;
+            const res = await fetch(url);
+            const gry = await res.json();
+            const container = document.getElementById('listaGier');
+            container.innerHTML = '';
+            
+            gry.forEach(g => {
+                container.innerHTML += `
+                    <div class="card">
+                        <div>
+                            <h3 style="margin: 0 0 5px 0;">${g.tytul} <small>(${g.rok || 'Brak roku'}) [${g.platforma}]</small></h3>
+                            <p style="margin: 0; color: #555;">Cena: <b>${g.cena} zł</b> | ★ ${g.ocena ?? '-'}/10 | ID: ${g.id}</p>
+                        </div>
+                        <div>
+                            <button class="btn-edit" onclick="wczytajDoEdycji(${g.id}, '${g.tytul.replace(/'/g, "\\'")}', '${g.platforma.replace(/'/g, "\\'")}', ${g.cena}, ${g.rok || 2020}, ${g.ocena ?? "''"})">Edytuj</button>
+                            <button class="btn-delete" onclick="usunGre(${g.id})">Usuń</button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            // Po odświeżeniu listy odświeżamy też statystyki
+            pobierzStatystyki();
+        }
+
+        // Zapis z uwzględnieniem roku
+        async function zapiszGre() {
+            const id = document.getElementById('editId').value;
+            const tytul = document.getElementById('tytul').value;
+            const platforma = document.getElementById('platforma').value;
+            const cena = parseFloat(document.getElementById('cena').value);
+            const rok = parseInt(document.getElementById('rok').value);
+            const ocena = Number(document.getElementById('ocena').value);
+
+            const metoda = id ? 'PUT' : 'POST';
+            const url = id ? `${API_URL}/${id}` : API_URL;
+
+            const res = await fetch(url, {
+                method: metoda,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tytul, platforma, cena, rok, ocena })
+            });
+
+            if (res.ok) {
+                document.getElementById('komunikatBledu').innerText = '';
+                resetujFormularz();
+                document.getElementById('tytul').focus();
+                pobierzGry();
+            } else {
+                const err = await res.json();
+                document.getElementById('komunikatBledu').innerText = err.komunikat;
+            }
+        }
+
+        // Wczytywanie pola rok do edycji
+        function wczytajDoEdycji(id, tytul, platforma, cena, rok, ocena) {
+            document.getElementById('editId').value = id;
+            document.getElementById('tytul').value = tytul;
+            document.getElementById('platforma').value = platforma;
+            document.getElementById('cena').value = cena;
+            document.getElementById('rok').value = rok;
+            document.getElementById('ocena').value = ocena;
+
+            document.getElementById('formTitle').innerText = `Edycja gry o ID: ${id}`;
+            document.getElementById('btnSubmit').innerText = 'Zapisz zmiany';
+            document.getElementById('btnSubmit').className = 'btn-edit';
+            document.getElementById('btnCancel').style.display = 'inline-block';
+        }
+
+        function resetujFormularz() {
+            document.getElementById('editId').value = '';
+            document.getElementById('tytul').value = '';
+            document.getElementById('platforma').value = '';
+            document.getElementById('cena').value = '';
+            document.getElementById('rok').value = '';
+            document.getElementById('ocena').value = '';
+
+            document.getElementById('formTitle').innerText = 'Dodaj nową grę';
+            document.getElementById('btnSubmit').innerText = 'Dodaj do Bazy';
+            document.getElementById('btnSubmit').className = 'btn-add';
+            document.getElementById('btnCancel').style.display = 'none';
+        }
+
+        async function usunGre(id) {
+            if (confirm("Czy na pewno chcesz usunąć tę grę?")) {
+                await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
+                pobierzGry();
+            }
+        }
+
+        // Start aplikacji
+        pobierzGry();
+    </script>
+</body>
+</html>

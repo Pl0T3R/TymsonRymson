@@ -1,0 +1,34 @@
+[
+  {
+    "id": 1,
+    "tytul": "Wiedźmin 3",
+    "platforma": "PC",
+    "cena": 79,
+    "rok": 2015,
+    "ocena": 10
+  },
+  {
+    "id": 2,
+    "tytul": "Cyberpunk 2077",
+    "platforma": "PS5",
+    "cena": 129,
+    "rok": 2020,
+    "ocena": 8
+  },
+  {
+    "id": 3,
+    "tytul": "Red Dead Redemption 2",
+    "platforma": "XBOX",
+    "cena": 110,
+    "rok": 2018,
+    "ocena": 9
+  },
+  {
+    "id": 4,
+    "tytul": "GTAVI",
+    "platforma": "PS5",
+    "cena": 1243,
+    "rok": 2026,
+    "ocena": 7
+  }
+]
