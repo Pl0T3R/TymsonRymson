@@ -17,7 +17,6 @@ function zapiszDane(dane) {
     fs.writeFileSync(FILE_PATH, JSON.stringify(dane, null, 2), 'utf-8');
 }
 
-// Walidacja danych gry (POST i PUT) - zwraca komunikat błędu lub null
 function walidujGre(dane, gry, idEdytowanej = null) {
     const { tytul, cena, rok, ocena } = dane;
     const biezacyRok = new Date().getFullYear();
@@ -41,7 +40,6 @@ function walidujGre(dane, gry, idEdytowanej = null) {
     return null;
 }
 
-// 1. Pobieranie gier + filtrowanie po platformie (Zadanie A) i wyszukiwanie po tytule
 app.get('/api/gry', (req, res) => {
     let gry = wczytajDane();
     const { platforma, szukaj } = req.query;
@@ -57,7 +55,6 @@ app.get('/api/gry', (req, res) => {
     res.status(200).json(gry);
 });
 
-// 2. Statystyki w czasie rzeczywistym (Zadanie B)
 app.get('/api/statystyki', (req, res) => {
     const gry = wczytajDane();
     if (gry.length === 0) {
@@ -78,7 +75,6 @@ app.get('/api/statystyki', (req, res) => {
     });
 });
 
-// 3. Pobieranie po ID
 app.get('/api/gry/:id', (req, res) => {
     const gry = wczytajDane();
     const id = parseInt(req.params.id);
@@ -91,7 +87,6 @@ app.get('/api/gry/:id', (req, res) => {
     res.status(200).json(gra);
 });
 
-// 4. Dodawanie nowej gry (Zadanie C - dodano walidację pola 'rok')
 app.post('/api/gry', (req, res) => {
     const gry = wczytajDane();
     const { tytul, platforma, cena, rok, ocena } = req.body;
@@ -121,7 +116,6 @@ app.post('/api/gry', (req, res) => {
     });
 });
 
-// 5. Pełna edycja gry PUT (Zadanie C - obsługa pola 'rok')
 app.put('/api/gry/:id', (req, res) => {
     const gry = wczytajDane();
     const id = parseInt(req.params.id);
@@ -155,7 +149,6 @@ app.put('/api/gry/:id', (req, res) => {
     });
 });
 
-// 6. Usuwanie gry
 app.delete('/api/gry/:id', (req, res) => {
     const gry = wczytajDane();
     const id = parseInt(req.params.id);
